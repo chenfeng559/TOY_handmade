@@ -7,7 +7,7 @@ import edge_tts
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, async_mode='threading',logging=True,cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode='threading',logging=True,engineio_logger = True,cors_allowed_origins="*")
 
 @socketio.on('connect')
 def connect():
@@ -22,17 +22,25 @@ def disconnect():
 
 @socketio.on("text")
 def handle_text(text):
-    asyncio.run(edge_tts.main(text))
+    asyncio.run(handle_edge_tts(text))
 
 
 async def handle_edge_tts(text):
     voice = "zh-CN-XiaoyiNeural"
-    comunicate = edge_tts.Comunicate(text,voice)
-    async for chunk in comunicate.chunks():
-        if chunk['type'] == "audio":
-            await socketio.emit("audio", chunk)
+    comunicate = edge_tts.Communicate(text,voice)
+    async for chunk in comunicate.stream():
+        print('chunk type =====>', chunk['type'])
+        if chunk['type'] == "audio" and chunk['data'] is not None:
+            # print(chunk["data"])c
+            try:
+                res = socketio.emit("audio", chunk["data"])
+                print('socket send=====>', res)
+            except Exception as e:
+                print(str(e))
+                print(socketio is None, chunk["data"])
         elif chunk['type'] == "WordBoundary":
             print("end")
+            # break
 
 
 if __name__ == '__main__':
