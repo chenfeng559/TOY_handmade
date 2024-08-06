@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket 测试客户端</title>
+    <!-- 引入 socket.io-client 库 -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        let socket;
+
+        function connect() {
+            // 使用 io 函数来创建一个 socket 对象并与服务器进行连接
+            socket = io('http://localhost:5000');
+
+            socket.on('connect', function() {
+                console.log('连接成功！！！终于连接上了');
+                document.getElementById('status').innerText = '连接成功';
+            });
+
+            socket.on('disconnect', function() {
+                console.log('连接关闭，关闭关闭');
+                document.getElementById('status').innerText = '连接关闭';
+            });
+
+            socket.on('audio', function(data) {
+                console.log('收到音频数据');
+                console.log(data);
+ 
+            });
+
+            socket.on('message', function(data) {
+                console.log('收到消息:', data);
+
+                const log = document.getElementById('log');
+                log.innerHTML += `<p>${data}</p>`;
+            });
+
+            socket.on('connect_error', function(error) {
+                console.log('连接错误', error);
+                document.getElementById('status').innerText = '连接错误';
+            });
+        }
+
+        function sendText() {
+            const text = document.getElementById('text').value;
+            socket.emit('text', text); // 使用 emit 方法发送文本数据
+        }
+    </script>
+</head>
+<body>
+    <h1>WebSocket 测试客户端</h1>
+    <p id="status">未连接</p>
+    <input type="text" id="text" placeholder="输入文本">
+    <button onclick="sendText()">发送文本</button>
+    <button onclick="connect()">连接</button>
+    <div id="log"></div>
+</body>
+</html>
