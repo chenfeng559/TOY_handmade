@@ -35,8 +35,7 @@ async def handle_edge_tts(text):
             try:
                 socketio.emit("count", count)
                 socketio.emit("audio", chunk["data"])
-                # count = count + 1
-                
+                # count = count + 1     
             except Exception as e:
                 print(str(e))
                 print(socketio is None, chunk["data"])
