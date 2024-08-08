@@ -1,5 +1,6 @@
 from flask_socketio import SocketIO, emit
 from app.service.LLM.ollama_service import Ollama
+from app.service.LLM.qwen_service import get_response
 from app.service.TTS.edge_tts_service import handle_edge_tts
 import logging
 import asyncio
@@ -23,6 +24,37 @@ def register_socketio_events(socketio, app):
 
     @socketio.on('text')
     def handle_text(data):
+        logging.debug(f'Received message: {data}')
+        message = [{'role': 'user', 'content': data}]
+
+        async def process_text(message):
+            try:
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor() as pool:
+                    response_generator = await loop.run_in_executor(pool, get_response, message)
+                    for response in response_generator:
+                        logging.debug(f"LLM response ===========> {response}")
+
+                        # 检查响应内容是否仅包含标点符号
+                        if all(char in punctuation for char in response.strip()):
+                            logging.debug("Response is only punctuation, skipping TTS conversion. The char is =====>", response)
+                            continue
+
+                        # Emit LLM 返回结果(业务不需要，可以注释)
+                        # socketio.emit('response', {'data': response}, json=True)
+
+                        # 生成TTS语音数据
+                        async for audio_chunk in handle_edge_tts(response):
+                            logging.debug("Emitting audio chunk")
+                            socketio.emit('audio', audio_chunk)
+            except Exception as e:
+                logging.error(f"Error in handle_text: {str(e)}")
+                socketio.emit('response', {'data': f"Error - {str(e)}"})
+
+        asyncio.run(process_text(message))
+
+    @socketio.on('chat_ollama')
+    def handle_chat_ollama(data):
         logging.debug(f'Received message: {data}')
         message = data
 
