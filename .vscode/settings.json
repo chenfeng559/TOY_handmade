@@ -1,4 +1,5 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
-  "idf.portWin": "COM9"
+  "idf.portWin": "COM9",
+  "cmake.sourceDirectory": "E:/WorkStation/TOY/ESP32_TOY/sample_project/main"
 }
