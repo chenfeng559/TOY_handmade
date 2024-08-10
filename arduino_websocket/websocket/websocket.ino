@@ -1,4 +1,5 @@
 #include <driver/i2s.h>
+#include <Bounce2.h>
 #include <WiFi.h>
 #include <Arduino.h>
 #include <ArduinoWebsockets.h>
@@ -23,6 +24,10 @@ const char* websocket_server = "192.168.31.160";
 const uint16_t websocket_port = 8765;
 const char* websocket_path = "/audio";
 
+// 按钮管脚配置
+const int buttonPin = 18;
+Bounce debouncer;
+bool isStreaming = false;
 
 // Audio buffer size
 const size_t bufferSize = 1024;
@@ -38,10 +43,11 @@ void connectToWebSocket();
 void onMessageCallback(WebsocketsMessage message);
 void onEventsCallback(WebsocketsEvent event, String data);
 size_t streamAudio(uint8_t* data, size_t size);
-
+void setupButton();
 
 void setup() {
     Serial.begin(115200);
+    setupButton();
     setupI2S();
     connectToWiFi();
     connectToWebSocket();
@@ -51,15 +57,43 @@ void setup() {
 }
 
 void loop() {
-    client.poll();
-    //readAndSendSerialInput();
-    size_t bytesRead = streamAudio(buffer, bufferSize);
-    //delay(50);
-    if (bytesRead > 0) {
-      //强制类型转换。sendBinary接受char*类型
-        client.sendBinary(reinterpret_cast<const char*>(buffer), bytesRead);
+  client.poll();
+  debouncer.update();
+
+  if (debouncer.fell()) {
+    isStreaming = !isStreaming;  // 切换音频流状态
+
+    if (isStreaming) {
+      client.send("START");
+      Serial.println("开始发送音频流");
+
+      while (isStreaming) {
+        size_t bytesRead = streamAudio(buffer, bufferSize);
+
+        if (bytesRead > 0) {
+          client.sendBinary(reinterpret_cast<const char*>(buffer), bytesRead);
+        }
+
+        debouncer.update();
+        if (debouncer.fell()) {
+          isStreaming = false;
+        }
+      }
+
+      client.send("END");
+      Serial.println("停止发送音频流");
     }
+  }
+}
+   
     
+
+
+// 设置按钮引脚和去抖动
+void setupButton() {
+  pinMode(buttonPin, INPUT_PULLUP);
+  debouncer.attach(buttonPin);
+  debouncer.interval(25);
 }
 
 
@@ -135,16 +169,6 @@ void connectToWebSocket() {
     }
 }
 
-// void readAndSendSerialInput() {
-//     if (Serial.available() > 0) {
-//         String input = Serial.readStringUntil('\n');
-//         input.trim();
-//         if (input.length() > 0) {
-//             client.send(input);
-//             Serial.println("Sent: " + input);
-//         }
-//     }
-// }
 
 void onMessageCallback(WebsocketsMessage message) {
     Serial.print("Received: ");

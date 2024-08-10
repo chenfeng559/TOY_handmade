@@ -93,7 +93,7 @@ def on_error(ws, error):
 
 # 收到websocket关闭的处理
 def on_close(ws,a,b):
-    print("### Finsh ###")
+    print("")
 
 
 # 收到websocket连接建立的处理
@@ -160,7 +160,7 @@ if __name__ == "__main__":
         APPID='68c6d108',
         APISecret='YjAyN2QxM2JjZDUwNmRlMTYxZDExYTE4',
         APIKey='d05347012a653385c38b8d877d844344',
-        AudioFile=r'.\audio\iat_pcm_16k.pcm'
+        AudioFile=r'E:\WorkStation\TOY\pcm_16k.pcm'
     )
     print(key)
     
